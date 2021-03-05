@@ -19,7 +19,7 @@ If it is a switch this script will log into it and perform the process again til
 It is able to achieve this by toggling Netmiko Parameters 'device_type' and 'use_textfsm' when sending commands
 It is able to hop between IOS and NXOS switches and will stop when it encounters non ios or nxos devices e.g. WLC
 It is able to detect a loop in its path and quit. 
-
+Information on netmiko https://github.com/ktbyers/netmiko/blob/develop/README.md
 
 Requirements
 ============
@@ -31,9 +31,7 @@ User account must have enable priviliges on all switches in network
 
 Be sure to enter the correct OS type for your starting switch, if not CDP check will not work 
 
-Must have ntc-templates folder in dircetory with script
-
-https://github.com/networktocode/ntc-templates
+Must have ntc-templates folder in directory with script. Instructions to install https://github.com/networktocode/ntc-templates
 
 
 Caveats and known Issues
