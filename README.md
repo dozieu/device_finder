@@ -31,6 +31,10 @@ User account must have enable priviliges on all switches in network
 
 Be sure to enter the correct OS type for your starting switch, if not CDP check will not work 
 
+Must have ntc-templates folder in dircetory with script
+
+https://github.com/networktocode/ntc-templates
+
 
 Caveats and known Issues
 ===============================
