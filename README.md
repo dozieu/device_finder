@@ -4,7 +4,7 @@ Locates the switch and port on which a device is connected to within a Cisco Lay
 
 Overview
 ==========
-This python script that employs the Netmiko Library with textfsm and ntc-templates to perform a Layer 2 trace in a Cisco switch network.
+This python script employs the Netmiko Library with textfsm and ntc-templates to perform a Layer 2 trace in a Cisco switch network.
 Script will accept login credentials, the IP and MAC addresses of the device to find and is able to use these input to locate 
 the edge switch and port to which the device is connected. A use case for this would be to find the switch and port 
 to which a Cisco IP phone is connected to within a building. It is able to do this within a network of NXOS and IOS network devices.
