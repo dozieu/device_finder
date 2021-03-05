@@ -8,18 +8,6 @@ from netmiko import ConnectHandler, file_transfer
 from ntc_templates.parse import parse_output
 import re
 
-''' This python script that employs the Netmiko Library with textfsm and ntc-templates to perform a Layer 2 trace in a Cisco switch network.
-Script will accept login credentials, the IP and MAC addresses of the device to find and is able to use these input to locate 
-the edge switch and port to which the device is connected.
-
-Requirements
-============
-SSH must be enabled on switches
-CDP must be enabled across the L2 network
-User account must have enable priviliges on all switches in network
-Be sure to enter the correct OS type for your starting switch, if not CDP check will not work 
-Must have ntc-templates folder in directory with this script. '''
-
 
 os.environ["NET_TEXTFSM"] = "./ntc-templates/templates/"
 
