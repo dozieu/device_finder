@@ -18,7 +18,7 @@ SSH must be enabled on switches
 CDP must be enabled across the L2 network
 User account must have enable priviliges on all switches in network
 Be sure to enter the correct OS type for your starting switch, if not CDP check will not work 
-Must have ntc-templates folder in directory with this script. '''
+Must have ntc-templates folder in directory with this script. See README file'''
 
 
 os.environ["NET_TEXTFSM"] = "./ntc-templates/templates/"
