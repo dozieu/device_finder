@@ -27,11 +27,8 @@ os.environ["NET_TEXTFSM"] = "./ntc-templates/templates/"
 def output_sieve(ios_response):
     ''' Accepts lines and returns list of each line's result of the split method performed on it'''
     try:
-        output_l = []
-        for i in ios_response.splitlines():
-            j = i.split()
-            output_l.append(j)
-
+        output_l = [ i.split()for i in ios_response.splitlines()]
+        
     except Exception as exc:
         print('There was a problem: %s' % (exc))
     return output_l
