@@ -1,4 +1,4 @@
-Name: device_finder
+#device_finder
 ==================
 Locates the switch and port on which a device is connected to within a Cisco Layer 2 environment.
 
