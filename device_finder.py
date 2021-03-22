@@ -51,7 +51,7 @@ def physical_port(os_response):
 
 
 def check_dev(host_ip, dst_ip, dst_mac, param, os_type):
-    ''' Accesses a host, performs a ping test to the destination then checks for the mac address on the host.
+    ''' check_dev performs a ping test to the destination then checks for the mac address on the host.
     if it finds the mac address it notes the interface on which it was found. if interface is a portchannel,
     it will retrieve a physical port member. It will then do  a cdp check. 
     function returns [host IP, destination IP, port of next hop, and the output from show cdp neighbor detail]'''
@@ -108,7 +108,7 @@ def check_dev(host_ip, dst_ip, dst_mac, param, os_type):
 
 
 def cdp_matcher(host_ip, dst_ip, port_info, output):
-    ''' function will seperate the strings that represent port number and port type from the port string. 
+    ''' cdp_matcher will seperate the strings that represent port number and port type from the port string. 
     This is because the port string is represented differently for the two commands; 
     the port string is an abbrevieted representation when gotten from [show mac address-table]
     but is complete when gotten from [show cdp neighbors detail].
