@@ -1,41 +1,62 @@
 #!/usr/bin/env python3
-# source venv/bin/activate
 
 import os
 import getpass
+import pprint
 from datetime import datetime
+import pyinputplus as pyip
 from netmiko import ConnectHandler, file_transfer
 from ntc_templates.parse import parse_output
 import re
+import argparse
 
-''' This python script that employs the Netmiko Library with textfsm and ntc-templates to perform a Layer 2 trace in a Cisco switch network.
-Script will accept login credentials, the IP and MAC addresses of the device to find and is able to use these input to locate 
-the edge switch and port to which the device is connected.
-
-Requirements
-============
-SSH must be enabled on switches
-CDP must be enabled across the L2 network
-User account must have enable priviliges on all switches in network
-Be sure to enter the correct OS type for your starting switch, if not CDP check will not work 
-Must have ntc-templates folder in directory with this script. See README file'''
 
 
 os.environ["NET_TEXTFSM"] = "./ntc-templates/templates/"
 
 
+def get_args():
+    """get command-line arguments"""
+
+    parser = argparse.ArgumentParser(
+        description='Locates the switch IP address and port on which a device is connected to within a Cisco Layer 2 environment',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('-s',
+                        '--stg_address',    
+                        help='starting host address',
+                        metavar='str',
+                        type=str)
+
+    parser.add_argument('-d',
+                        '--dst_address',
+                        help='destination device address',
+                        metavar='str',
+                        type=str)
+
+    parser.add_argument('-m',
+                        '--mac_address',
+                        help='destination MAC address [xxxx.xxxx.xxxx]',
+                        metavar='str',
+                        type=str)
+
+    
+    return parser.parse_args()
+
+
+
 def output_sieve(ios_response):
     ''' Accepts lines and returns list of each line's result of the split method performed on it'''
-    try:
-        output_l = [ i.split()for i in ios_response.splitlines()]
-        
-    except Exception as exc:
-        print('There was a problem: %s' % (exc))
+    output_l = []
+    for line in ios_response.splitlines():
+        splt_line = line.split()
+        output_l.append(splt_line)
+    
     return output_l
 
 
 def port_str_splitter(portstring):
-    '''used to seperate port type and port number from portstring '''
+    '''Used to seperate port type and port number from portstring '''
     port_str = (re.findall(r'(\w+?)(\d+)', portstring)[0])[0]
     str_len = len(port_str)
     port_num = portstring[str_len:]
@@ -51,7 +72,7 @@ def physical_port(os_response):
 
 
 def check_dev(host_ip, dst_ip, dst_mac, param, os_type):
-    ''' check_dev performs a ping test to the destination then checks for the mac address on the host.
+    ''' Accesses a host, performs a ping test to the destination then checks for the mac address on the host.
     if it finds the mac address it notes the interface on which it was found. if interface is a portchannel,
     it will retrieve a physical port member. It will then do  a cdp check. 
     function returns [host IP, destination IP, port of next hop, and the output from show cdp neighbor detail]'''
@@ -65,17 +86,20 @@ def check_dev(host_ip, dst_ip, dst_mac, param, os_type):
         net_connect = ConnectHandler(**param)
         output = net_connect.send_command(f'ping {dst_ip}', strip_prompt=True,
                                           strip_command=True, use_textfsm=False)
-
+        
         if '!' in output or '64' in output:
 
             print(f'{host_ip} pinged... {dst_ip}\n')
             output = ''  # if valid ping response, performs mac address search.
             output += net_connect.send_command(f'show mac address-table | i {dst_mac}', strip_prompt=True,
                                                strip_command=True, use_textfsm=False)
-
+            
             if output:  # if valid mac results, grab port information and check for portchannel membership
+                
                 locating_info = output_sieve(output)
+                
                 port_info = locating_info[0][-1]    # -- set port info
+                
                 print(f'MAC was found on interface {port_info}\n')
                 output = ''
                 output += net_connect.send_command(f'sho interface {port_info} | i Members', strip_prompt=True,
@@ -93,22 +117,25 @@ def check_dev(host_ip, dst_ip, dst_mac, param, os_type):
             output = ''
 
         if output:
-            # -- signals that it has found Portchannel and displays port members
-            print(output + '\n')
+            # -- Displays port to check and test cdp information            
             print(f'Checking CDP for port: {port_info}\n')
             output = ''
             output = net_connect.send_command('show cdp neighbors detail', strip_prompt=True,
                                               strip_command=True, use_textfsm=True)
             net_connect.disconnect()
+
+    except IndexError: # occurs when netmiko timers are shorter
+        print('output_sieve err: may need to adjust delay factor')
+
     except Exception as exc:
-        print('There was a problem: error with device information')
+        print('check_dev err: error device information')        
         print(exc)
 
     return (host_ip, dst_ip, port_info, output)
 
 
 def cdp_matcher(host_ip, dst_ip, port_info, output):
-    ''' cdp_matcher will seperate the strings that represent port number and port type from the port string. 
+    ''' function will seperate the strings that represent port number and port type from the port string. 
     This is because the port string is represented differently for the two commands; 
     the port string is an abbrevieted representation when gotten from [show mac address-table]
     but is complete when gotten from [show cdp neighbors detail].
@@ -120,22 +147,22 @@ def cdp_matcher(host_ip, dst_ip, port_info, output):
     found_neighbor = [found_ip, end_search, found_os]
     port_type = (port_info[:2])
     port_num = (port_str_splitter(port_info))[1]
-    for i in output:
+    for cdp_info in output:
         # Searches through result of show cdp neigbors detail to find IP,OS, and Capabilities
-        local_port_num = (i['local_port']).split('net')
-        if port_type == i['local_port'][:2] and local_port_num[1] == port_num:  # Match interface
+        local_port_num = (cdp_info['local_port']).split('net')
+        if port_type == cdp_info['local_port'][:2] and local_port_num[1] == port_num:  # if matched interface
 
-            found_port = i['local_port']
-            if ('management_ip') in i:  # Set found_ip
-                found_ip = i['management_ip']
-            if ('mgmt_ip') in i:
-                found_ip = i['mgmt_ip']
-            if ('software_version') in i:   # Set found_os
-                found_os = i['software_version']
-            if ('version') in i:
-                found_os = i['version']
+            found_port = cdp_info['local_port']
+            if ('management_ip') in cdp_info:  # Set found_ip
+                found_ip = cdp_info['management_ip']
+            if ('mgmt_ip') in cdp_info:
+                found_ip = cdp_info['mgmt_ip']
+            if ('software_version') in cdp_info:   # Set found_os
+                found_os = cdp_info['software_version']
+            if ('version') in cdp_info:
+                found_os = cdp_info['version']
 
-            if i['capabilities'] == 'Host':  # -- In case you encounter other devices e.g. Cisco WLC
+            if cdp_info['capabilities'] == 'Host':  # -- In case you encounter other devices e.g. Cisco WLC
                 print(
                     f'** Non-switch detected - Unable to trace beyond {host_ip}')
                 end_search = True
@@ -145,8 +172,8 @@ def cdp_matcher(host_ip, dst_ip, port_info, output):
                     f'** Device is CDP enabled and found on {host_ip} {found_port}')
                 end_search = True
             break
-    else:
-        print(f'** No CDP info. Last hop is -> {host_ip} port {port_info}')
+    else: # No cdp match, last hop is this device
+        print(f'** No CDP info. Last hop is: {host_ip} port {port_info}')
         end_search = True
 
     found_neighbor = [found_ip, end_search, found_os]
@@ -154,64 +181,90 @@ def cdp_matcher(host_ip, dst_ip, port_info, output):
 
 
 def finder(starting_host, dev_addr, dev_mac, dev_param, os_type):
-    ''' finder uses the results from check_dev to know if to jump to next device.
+    ''' finder uses the results from check_dev to know whether to jump to next device.
     It checks whether to end search or if to update "os_type" and "starting_host" for next call to check_dev.
     Function returns a list of hops showing the layer 2 path'''
 
-    start_time = datetime.now()
+    
     print(f'\nStarting from {starting_host}\n')
     hops = [starting_host]
+    ports = []
 
     while True:
         if starting_host == 'N/A':
             break
-        j = check_dev(starting_host, dev_addr, dev_mac, dev_param, os_type)
-        if j[2]:
-            k = cdp_matcher(j[0], j[1], j[2], j[3])
-            if k[1] == False:  # Check whether to stop search
-                if 'NX-OS' in k[2]:     # Setting device type for next hop to access
+        dev_results = check_dev(starting_host, dev_addr, dev_mac, dev_param, os_type)
+        if dev_results[2]:
+            ports.append(dev_results[2])
+            dev_match = cdp_matcher(dev_results[0], dev_results[1], dev_results[2], dev_results[3])
+            if dev_match[1] == False:  # Check whether to stop search
+                if 'NX-OS' in dev_match[2]:     # Setting device type for next hop to access
                     os_type = 'cisco_nxos'
                 else:
                     os_type = 'cisco_ios'
-                if k[0] in hops:  # guard against loop
+                if dev_match[0] in hops:  # Guard against loop
                     print('** Loop detected! stopping search.. ')
                     break
-                hops.append(k[0])
-                starting_host = k[0]
+                hops.append(dev_match[0])
+                starting_host = dev_match[0]
 
             else:  # If end search is True
-                if k[0] != 'N/A':  # If last found was a CDP device and not a L2 switch
-                    hops.append(k[0])
-                if k[0] == dev_addr:  # Remove destintaion address from list
+                if dev_match[0] != 'N/A':  # If last found was a CDP device and not a L2 switch
+                    hops.append(dev_match[0])
+                if dev_match[0] == dev_addr:  # Remove destintaion address from list
                     hops.pop()
                 break
         else:
             break
 
-    print(f'** Trace path for mac {dev_mac} ' + '->' + str(hops))
-    end_time = datetime.now()
-    print("** Transaction time: {} \n".format(end_time - start_time))
+        
+    return hops, ports
 
-    return hops
 
+def present_path(addrs,ports):
+    #displays a chain of address/port pairs for each device in path
+    path = list(zip(addrs,ports))
+    for pair in path:
+        if pair == path[-1]:
+            print (pair)
+        else:
+            print (str(pair) + ' --> ', end='')
 
 # ----------------------------------------------------------------------------
 
 if __name__ == '__main__':
+
+    args = get_args()
 
     print()
     print('#' * 49)
     print('#' + ((' ') * 7) + '-- Running Cisco Device Finder --' + ((' ') * 7) + '#')
     print('#' * 49)
     print()
+
+    if args.stg_address:
+        starting_host = args.stg_address
+    else:
+        starting_host = input('Enter starting host IP: ')
+
+    if args.dst_address:
+        dev_addr = args.dst_address
+    else:
+        dev_addr = input('Enter search IP address: ')
+
+    if args.mac_address:
+        mac_addr = args.mac_address
+    else:
+        mac_addr = input('Enter search MAC address (****.****.****): ')
     
+        
     user = input('username: ')
     pw = getpass.getpass()
-    starting_host = input('Enter starting host IP: ')
-    dev_addr = input('Enter search IP address: ')
-    device_mac = input('Enter search MAC address (****.****.****): ')
-    os_type = input('Enter Starting Host OS type ("ios" or "nxos"): ')
-
+    
+    start_time = datetime.now()
+    
+    os_type = pyip.inputMenu(['ios', 'nxos'],prompt='Enter Starting Host OS type\n' ,numbered=True)
+    
 
     if os_type == 'nxos':
         os_type = 'cisco_nxos'
@@ -224,8 +277,14 @@ if __name__ == '__main__':
                  'username': user,
                  'password': pw,                 
                  'timeout': 15,
-                 'global_delay_factor': 0.2,  
+                 'global_delay_factor': 0.5,  
                  }
 
-    op = finder(starting_host, dev_addr, device_mac, dev_param, os_type)
+    all_addrs, all_ports = finder(starting_host, dev_addr, mac_addr, dev_param, os_type)
+    
+    # Present path consolidated results to user
+    print(f'** Trace path for mac address: {mac_addr.upper()} ')
+    present_path(all_addrs, all_ports)
+    end_time = datetime.now()
+    print("** Transaction time: {} \n".format(end_time - start_time))
 
