@@ -1,6 +1,6 @@
 #device_finder
 ==============
-Locates the switch and port on which a device is connected to within a Cisco Layer 2 environment.
+Locates the switch ip address and port on which a device is connected to within a Cisco Layer 2 environment.
 
 Overview
 ==========
@@ -10,6 +10,22 @@ the edge switch and port to which the device is connected. A use case for this w
 to which a Cisco IP phone is connected to within a building. It is able to do this within a network of NXOS and IOS network devices.
 The script prints the last hop (Ip address) and port on which the device was learnt, and a list of hops along its trace path. 
 
+script can be run with command line arguments
+usage: device_finder.py [-h] [-s str] [-d str] [-m str]
+
+Locates the switch IP address and port on which a device is connected to within a Cisco
+Layer 2 environment
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -s str, --stg_address str
+                        starting host address (default: None)
+  -d str, --dst_address str
+                        destination device address (default: None)
+  -m str, --mac_address str
+                        destination MAC address [xxxx.xxxx.xxxx] (default: None)
+                        
+ If not run with cli arguments script will default to presenting prompts to guide user
 
 How it does it
 ==============
