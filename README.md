@@ -6,11 +6,12 @@ Overview
 ==========
 This python script employs the Netmiko Library with textfsm and ntc-templates to perform a Layer 2 trace in a Cisco switch network.
 Script will accept login credentials, the IP and MAC addresses of the device to find and is able to use these input to locate 
-the edge switch and port to which the device is connected. A use case for this would be to find the switch and port 
-to which a Cisco IP phone is connected to within a building. It is able to do this within a network of NXOS and IOS network devices.
+the edge switch and port to which the device is connected. 
+A use case for this would be to find the switch and port to which a Cisco IP phone is connected to within a building. It is able to do this within a network of NXOS and IOS network devices. script results also represent a physical path to the device being traced.
 The script prints the last hop (Ip address) and port on which the device was learnt, and a list of hops along its trace path. 
 
 script can be run with command line arguments
+
     usage: device_finder.py [-h] [-s str] [-d str] [-m str]
 
     Locates the switch IP address and port on which a device is connected to within a Cisco
