@@ -27,6 +27,8 @@ script can be run with command line arguments
                             destination MAC address [xxxx.xxxx.xxxx] (default: None)
                         
  If not run with cli arguments script will default to presenting prompts to guide user
+ 
+ Try the dockerized web gui version https://hub.docker.com/r/dozieu/collabtools-v01
 
 How it does it
 ==============
